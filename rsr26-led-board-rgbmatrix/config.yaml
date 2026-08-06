@@ -4,37 +4,31 @@ app:
 collector:
   type: "mock"
 
-storage:
-  sqlite:
-    path: "./rsr26.db"
-
 matrix:
   width: 128
   height: 64
   output: "rgb_matrix"
-  brightness: 20
-  brightness_day: 20
-  brightness_night: 15
+  brightness: 60
+  brightness_day: 60
+  brightness_night: 40
   night_start: "18:00"
   night_end: "05:00"
 
 rgb_matrix:
-  # Confirmed demo command:
-  # ./demo --led-rows=64 --led-cols=128 --led-chain=1 --led-slowdown-gpio=3
-  #        --led-brightness=20 --led-no-hardware-pulse --led-multiplexing=0 -D 0
   rows: 64
   cols: 128
   chain_length: 1
   parallel: 1
   hardware_mapping: "regular"
   gpio_slowdown: 3
-  brightness: 20
+  brightness: 60
   disable_hardware_pulsing: true
   multiplexing: 0
   pwm_bits: 8
   led_rgb_sequence: "RGB"
   show_refresh_rate: false
   font_candidates:
+    - "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
     - "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
     - "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
     - "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf"
@@ -47,8 +41,17 @@ console:
   frame_width_chars: 32
 
 layout:
-  title_font_size: 10
-  body_font_size: 9
+  title_font_size: 12
+  body_font_size: 16
+  title_y: 4
+  separator_y: 20
+  body_y: 26
+  bold_px: 1
+
+scroll:
+  step_pixels: 2
+  end_hold_frames: 20
+  short_message_frames: 60
 
 message_builder:
   title_text: "#RSR26 LIVE"

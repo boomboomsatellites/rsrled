@@ -1,12 +1,12 @@
-# RSR26 LED Matrix Live Board for Raspberry Pi 3B
+# RSR26 LED Matrix Live Board: scroll-complete版
 
-`./demo --led-rows=64 --led-cols=128 --led-chain=1 --led-slowdown-gpio=3 --led-brightness=20 --led-no-hardware-pulse --led-multiplexing=0 -D 0` で表示できた設定に合わせて `rgb_matrix_output.py` を更新した版です。
+本文スクロールが途中で次画面に切り替わらないよう、**スクロールが最後まで流れてから次メッセージへ進む** 実装に変更した版です。
 
 ## 実機表示
 
 ```bash
 pip install -r requirements.txt
-sudo -E python3 -m src.main --collector mock --output rgb_matrix --frames 1000 --sleep 0.05
+sudo -E python3 -m src.main --output rgb_matrix --frames 1000 --sleep 0.05
 ```
 
 または:
@@ -15,24 +15,23 @@ sudo -E python3 -m src.main --collector mock --output rgb_matrix --frames 1000 -
 ./scripts/run_rgb_matrix.sh
 ```
 
-## 重要設定
+## スクロール関連設定
 
 ```yaml
-rgb_matrix:
-  rows: 64
-  cols: 128
-  chain_length: 1
-  gpio_slowdown: 3
-  brightness: 20
-  disable_hardware_pulsing: true
-  multiplexing: 0
-  hardware_mapping: "regular"
+scroll:
+  step_pixels: 2
+  end_hold_frames: 20
+  short_message_frames: 60
 ```
 
-## 日本語フォント
+- `step_pixels`: スクロール速度。小さいほどゆっくり。
+- `end_hold_frames`: 最後まで流れた後の待ち時間。
+- `short_message_frames`: スクロール不要な短文の表示フレーム数。
 
-日本語が豆腐になる場合:
+## 反映済みの見やすさ改善
 
-```bash
-sudo apt install fonts-noto-cjk
-```
+- 本文色を白に変更
+- 疑似ボールド `bold_px: 1`
+- layoutの初期値を調整
+- brightnessを60へ引き上げ
+- demoで動作確認済み設定に合わせた `rgb_matrix` 設定

@@ -5,24 +5,49 @@ output=console, messages=6
 |--------------------------------|
 |NOW STREAMING                   |
 +--------------------------------+
++--------------------------------+
+|          #RSR26 LIVE           |
+|--------------------------------|
+|NOW STREAMING                   |
++--------------------------------+
++--------------------------------+
+|          #RSR26 LIVE           |
+|--------------------------------|
+|NOW STREAMING                   |
++--------------------------------+
++--------------------------------+
+|          #RSR26 LIVE           |
+|--------------------------------|
+|NOW STREAMING                   |
++--------------------------------+
++--------------------------------+
+|          #RSR26 LIVE           |
+|--------------------------------|
+|NOW STREAMING                   |
++--------------------------------+
 
 RC=0
 
 PREVIEW
 output=preview, messages=6
-preview saved: preview_frame.png [#RSR26 LIVE] NOW STREAMING
+preview saved: preview_frame.png done=False [#RSR26 LIVE]
+preview saved: preview_frame.png done=False [#RSR26 LIVE]
+preview saved: preview_frame.png done=False [#RSR26 LIVE]
+preview saved: preview_frame.png done=False [#RSR26 LIVE]
+preview saved: preview_frame.png done=False [#RSR26 LIVE]
 
 RC=0
 
 PYTEST
 [1m============================= test session starts ==============================[0m
 platform linux -- Python 3.12.9, pytest-9.1.1, pluggy-1.6.0
-rootdir: /mnt/data/rsr26-led-board-rgbmatrix
+rootdir: /mnt/data/rsr26-led-board-scroll-complete
 plugins: anyio-4.14.2, Faker-38.2.0, timeout-2.4.0, typeguard-4.6.0
-collected 1 item
+collected 3 items
 
-tests/test_render.py [32m.[0m[32m                                                   [100%][0m
+tests/test_render.py [32m.[0m[32m                                                   [ 33%][0m
+tests/test_scroll_complete.py [32m.[0m[32m.[0m[32m                                         [100%][0m
 
-[32m============================== [32m[1m1 passed[0m[32m in 0.18s[0m[32m ===============================[0m
+[32m============================== [32m[1m3 passed[0m[32m in 0.23s[0m[32m ===============================[0m
 
 RC=0
