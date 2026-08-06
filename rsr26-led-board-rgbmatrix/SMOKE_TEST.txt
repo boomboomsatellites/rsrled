@@ -1,0 +1,28 @@
+CONSOLE
+output=console, messages=6
++--------------------------------+
+|          #RSR26 LIVE           |
+|--------------------------------|
+|NOW STREAMING                   |
++--------------------------------+
+
+RC=0
+
+PREVIEW
+output=preview, messages=6
+preview saved: preview_frame.png [#RSR26 LIVE] NOW STREAMING
+
+RC=0
+
+PYTEST
+[1m============================= test session starts ==============================[0m
+platform linux -- Python 3.12.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: /mnt/data/rsr26-led-board-rgbmatrix
+plugins: anyio-4.14.2, Faker-38.2.0, timeout-2.4.0, typeguard-4.6.0
+collected 1 item
+
+tests/test_render.py [32m.[0m[32m                                                   [100%][0m
+
+[32m============================== [32m[1m1 passed[0m[32m in 0.18s[0m[32m ===============================[0m
+
+RC=0

@@ -1,0 +1,55 @@
+app:
+  hashtag: "#RSR26"
+
+collector:
+  type: "mock"
+
+storage:
+  sqlite:
+    path: "./rsr26.db"
+
+matrix:
+  width: 128
+  height: 64
+  output: "rgb_matrix"
+  brightness: 20
+  brightness_day: 20
+  brightness_night: 15
+  night_start: "18:00"
+  night_end: "05:00"
+
+rgb_matrix:
+  # Confirmed demo command:
+  # ./demo --led-rows=64 --led-cols=128 --led-chain=1 --led-slowdown-gpio=3
+  #        --led-brightness=20 --led-no-hardware-pulse --led-multiplexing=0 -D 0
+  rows: 64
+  cols: 128
+  chain_length: 1
+  parallel: 1
+  hardware_mapping: "regular"
+  gpio_slowdown: 3
+  brightness: 20
+  disable_hardware_pulsing: true
+  multiplexing: 0
+  pwm_bits: 8
+  led_rgb_sequence: "RGB"
+  show_refresh_rate: false
+  font_candidates:
+    - "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+    - "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
+    - "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf"
+    - "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+
+preview:
+  scale: 6
+
+console:
+  frame_width_chars: 32
+
+layout:
+  title_font_size: 10
+  body_font_size: 9
+
+message_builder:
+  title_text: "#RSR26 LIVE"
+  latest_post_prefix: ">"
