@@ -2,7 +2,12 @@ app:
   hashtag: "#RSR26"
 
 collector:
-  type: "mock"
+  type: "mock"          # "mock" or "twscrape"
+  poll_interval_seconds: 30
+  max_buffer: 20
+  max_results: 20
+  exclude_retweets: true
+  db_path: "accounts.db"  # twscrape accounts DB, see README for setup
 
 matrix:
   width: 128

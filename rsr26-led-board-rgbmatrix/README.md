@@ -35,3 +35,38 @@ scroll:
 - layoutの初期値を調整
 - brightnessを60へ引き上げ
 - demoで動作確認済み設定に合わせた `rgb_matrix` 設定
+
+## X(Twitter)投稿の取得(twscrape)
+
+`config.yaml` の `collector.type` を `twscrape` にすると、`#RSR26` を含む投稿を取得して表示します。
+
+**注意点**
+
+- twscrapeはX公式APIではなく、ログイン済みアカウントのセッションを使ってX内部のGraphQL APIを直接叩く非公式ライブラリです。X利用規約上はグレー〜黒に近い扱いなので、イベント公式アカウント等の重要アカウントでは使わないこと(凍結リスクがあります)。捨てアカウント推奨。
+- Xの仕様変更で予告なく動かなくなる可能性があります。本番当日に壊れても慌てないよう、`collector.type` を `mock` に戻せばすぐに従来動作に戻せます。
+
+**事前準備(アカウント登録)**
+
+```bash
+pip install -r requirements.txt
+
+# accounts.db を作成し、アカウントを1つ以上登録
+twscrape add_accounts accounts.txt username:password:email:email_password
+twscrape login_accounts
+```
+
+`accounts.txt` は `username:password:email:email_password` 形式で1アカウント1行のテキストファイルです。ログインに成功すると `accounts.db`(SQLite)にセッション情報が保存されます。このファイルはパスワード相当の機密情報を含むので、`.gitignore` に入れて絶対にコミットしないでください。
+
+**config.yaml の設定項目**
+
+```yaml
+collector:
+  type: "twscrape"
+  poll_interval_seconds: 30   # 何秒ごとに新着をチェックするか
+  max_buffer: 20               # 表示ローテーションに保持する投稿数の上限
+  max_results: 20              # 1回のポーリングで取得する最大件数
+  exclude_retweets: true       # リツイートを除外するか
+  db_path: "accounts.db"       # 上で作成したaccounts.dbへのパス
+```
+
+`poll_interval_seconds` はXから見た通信頻度そのものなので、あまり短くしすぎるとアカウントがレート制限やBAN対象になりやすくなります。30〜60秒程度を推奨します。

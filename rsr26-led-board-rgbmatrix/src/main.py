@@ -1,6 +1,6 @@
 import argparse, time
 from src.config import load_config
-from src.collectors.mock_collector import MockCollector
+from src.collectors.factory import create_collector
 from src.analyzers.message_builder import build_messages
 from src.outputs.console_output import ConsoleOutput
 from src.outputs.preview_output import PreviewOutput
@@ -23,11 +23,39 @@ def main():
     args = ap.parse_args()
     cfg = load_config(args.config)
     output_name = args.output or cfg.get('matrix', {}).get('output', 'console')
-    messages = build_messages(MockCollector().fetch(), cfg)
+    collector_cfg = cfg.get('collector', {})
+    poll_interval = float(collector_cfg.get('poll_interval_seconds', 30))
+    max_buffer = int(collector_cfg.get('max_buffer', 20))
+
+    collector = create_collector(cfg)
     out = make_output(output_name, cfg)
-    print(f'output={output_name}, messages={len(messages)}')
+
+    posts = []
+    seen_ids = set()
+    messages = build_messages(posts, cfg)
+    print(f"output={output_name}, collector={collector_cfg.get('type', 'mock')}, messages={len(messages)}")
+
     index = 0
+    last_fetch = 0.0
     for _ in range(args.frames):
+        now = time.monotonic()
+        if now - last_fetch >= poll_interval:
+            last_fetch = now
+            try:
+                new_posts = collector.fetch()
+            except Exception as e:
+                print(f'collector fetch error: {e}')
+                new_posts = []
+            fresh = [p for p in new_posts if p.external_id not in seen_ids]
+            if fresh:
+                for p in fresh:
+                    seen_ids.add(p.external_id)
+                posts.extend(fresh)
+                posts = posts[-max_buffer:]
+                seen_ids = {p.external_id for p in posts}
+                messages = build_messages(posts, cfg)
+                print(f'new posts: {len(fresh)}, total buffered: {len(posts)}')
+
         msg = messages[index % len(messages)]
         done = out.show(msg)
         if done:

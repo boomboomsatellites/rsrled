@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# twscrape account credentials / session store
+accounts.db
+accounts.txt
