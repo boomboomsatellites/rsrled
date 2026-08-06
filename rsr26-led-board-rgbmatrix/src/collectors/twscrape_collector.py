@@ -77,6 +77,7 @@ class TwscrapeCollector:
                 external_id=str(tweet.id),
                 posted_at=posted_at,
                 author_name=username,
+                display_name=tweet.user.displayname if getattr(tweet, 'user', None) else '',
                 text=getattr(tweet, 'rawContent', '') or '',
                 url=getattr(tweet, 'url', '') or '',
             ))

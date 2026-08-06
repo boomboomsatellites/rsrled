@@ -8,6 +8,7 @@ class Post:
     author_name: str
     text: str
     url: str = ""
+    display_name: str = "" 
 
 @dataclass
 class DisplayMessage:

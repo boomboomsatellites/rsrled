@@ -122,36 +122,48 @@ class RGBMatrixOutput:
         bold = int(layout.get('bold_px', 1))
         body_font = get_cached_font(self.cfg, int(layout.get('body_font_size', 16)))
         title_font = get_cached_font(self.cfg, int(layout.get('title_font_size', 12)))
+        body_y = int(layout.get('body_y', 26))
 
-        bg_key = f"{message.title}:{message.message_type}:{brightness}:{bold}"
+        # 背景は「黒+区切り線」だけ（メッセージに依存しない永続キャッシュ）
+        bg_key = f"base_bg:{brightness}"
         if bg_key not in self._bg_cache:
             bg = Image.new('RGB', (panel_width, panel_height), 'black')
             draw = ImageDraw.Draw(bg)
-            amber = _scale((255, 190, 45), brightness)
             gray = _scale((70, 70, 70), brightness)
-            red = _scale((255, 80, 60), brightness)
-            title_y = int(layout.get('title_y', 4))
             sep_y = int(layout.get('separator_y', 20))
-            title = (message.title or '')[:20]
-            title_color = red if message.message_type == 'caution' else amber
-            draw_text_bold(draw, (2, title_y), title, title_color, title_font, bold=bold)
             draw.line((0, sep_y, panel_width, sep_y), fill=gray)
             self._bg_cache[bg_key] = bg
 
+        # タイトル画像を別キャッシュ
+        title = (message.title or '')[:20]
+        title_key = f"title:{title}:{message.message_type}:{brightness}:{bold}"
+        if title_key not in self._bg_cache:
+            title_img = Image.new('RGB', (panel_width, panel_height), 'black')
+            draw = ImageDraw.Draw(title_img)
+            amber = _scale((255, 190, 45), brightness)
+            red = _scale((255, 80, 60), brightness)
+            title_color = red if message.message_type == 'caution' else amber
+            title_y = int(layout.get('title_y', 4))
+            draw_text_bold(draw, (2, title_y), title, title_color, title_font, bold=bold)
+            self._bg_cache[title_key] = title_img
+
+        # 本文キャッシュ：高さをタイトル下の領域だけに（panel_height - body_y）
         body_key = f"{body}:{bold}:{brightness}"
+        body_h = panel_height - body_y
         if body_key not in self._body_cache:
             w = max(tw, panel_width) + panel_width
-            body_img = Image.new('RGB', (w, panel_height), 'black')
+            body_img = Image.new('RGB', (w, body_h), 'black')
             draw = ImageDraw.Draw(body_img)
-            body_y = int(layout.get('body_y', 26))
             white = _scale((255, 255, 255), brightness)
-            draw_text_bold(draw, (0, body_y), body, white, body_font, bold=bold)
+            # 本文画像内では y=0 から描画（貼り付け時に body_y へ）
+            draw_text_bold(draw, (0, 0), body, white, body_font, bold=bold)
             self._body_cache[body_key] = body_img
 
+        # 合成：背景 → タイトル → 本文
         result = self._bg_cache[bg_key].copy()
-        body_img = self._body_cache[body_key]
+        result.paste(self._bg_cache[title_key], (0, 0))
         
-        # 元の draw.text((offset, y), ...) と同じ動作：右から左にスクロール
+        body_img = self._body_cache[body_key]
         if offset >= 0:
             paste_x = offset
             src_x = 0
@@ -159,11 +171,11 @@ class RGBMatrixOutput:
         else:
             paste_x = 0
             src_x = -offset
-            crop_width = min(panel_width, body_img.width + offset)  # offsetは負なので実質減算
+            crop_width = min(panel_width, body_img.width + offset)
         
         if crop_width > 0:
-            cropped = body_img.crop((src_x, 0, src_x + crop_width, panel_height))
-            result.paste(cropped, (paste_x, 0))
-        
-        return result
+            cropped = body_img.crop((src_x, 0, src_x + crop_width, body_h))
+            # y=body_y に貼り付け → タイトル部分は上書きされない
+            result.paste(cropped, (paste_x, body_y))
 
+        return result
