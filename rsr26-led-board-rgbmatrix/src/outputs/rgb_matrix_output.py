@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import datetime
+from datetime import datetime, timedelta
 from PIL import Image, ImageDraw
 from src.display.brightness import select_brightness
 from src.display.marquee import MarqueeState
@@ -178,4 +178,26 @@ class RGBMatrixOutput:
             # y=body_y に貼り付け → タイトル部分は上書きされない
             result.paste(cropped, (paste_x, body_y))
 
+        # 右下に投稿時刻（JST）を表示
+        posted_at = getattr(message, 'posted_at', '')
+        if posted_at:
+            try:                
+                dt = datetime.fromisoformat(posted_at.replace('Z', '+00:00'))
+                dt_jst = dt + timedelta(hours=9)
+                time_str = dt_jst.strftime('%Y/%m/%d %H:%M:%S')
+                
+                time_font_size = 8
+                time_font = get_cached_font(self.cfg, time_font_size)
+                gray = _scale((120, 120, 120), brightness)
+                
+                # テキスト幅測定
+                tw_time = text_width(self.cfg, time_str, time_font_size)
+                time_x = panel_width - tw_time - 2
+                time_y = panel_height - time_font_size - 2
+                
+                draw = ImageDraw.Draw(result)
+                draw.text((time_x, time_y), time_str, fill=gray, font=time_font)
+            except Exception:
+                pass  # 時刻パース失敗時は無視
+        
         return result

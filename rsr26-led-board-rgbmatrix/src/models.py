@@ -17,3 +17,4 @@ class DisplayMessage:
     body: str
     priority: int = 0
     duration_seconds: int = 8
+    posted_at: str = ""

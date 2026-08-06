@@ -9,20 +9,21 @@ def build_messages(posts, cfg):
         handle = getattr(p, 'author_name', None) or getattr(p, 'username', None) or 'UNKNOWN'
         display = getattr(p, 'display_name', '') or ''
         
-        # 組み合わせパターン
         if display and display != handle:
-            # 表示名とハンドル名が異なる場合
-            # 優先順位：表示名 > ハンドル名 > 両方
             combined = f"{display} (@{handle})"
             if len(combined) > 20:
-                # 20文字を超えるなら表示名優先、それでも長ければハンドル名のみ
                 combined = display[:20] if len(display) <= 20 else f"@{handle}"
         else:
-            # 表示名がない、または同じ場合はハンドル名のみ
-            combined = f"@{handle}"
+            combined = f"@{handle}" if not str(handle).startswith('@') else str(handle)
         
         combined = combined[:20]
-        msgs.append(DisplayMessage('latest_post', combined, f'{prefix} {p.text}'))
+        # posted_at を渡す
+        msgs.append(DisplayMessage(
+            'latest_post', 
+            combined, 
+            f'{prefix} {p.text}',
+            posted_at=p.posted_at  # ← 追加
+        ))
     
     msgs.append(DisplayMessage('summary', 'RSR26 NOW', '投稿を受信中'))
     return msgs

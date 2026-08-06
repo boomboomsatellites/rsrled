@@ -32,15 +32,17 @@ def main():
 
     posts = []
     seen_ids = set()
-    messages = build_messages(posts, cfg)
-    print(f"output={output_name}, collector={collector_cfg.get('type', 'mock')}, messages={len(messages)}")
+    print(f"output={output_name}, collector={collector_cfg.get('type', 'mock')}")
 
-    index = 0
+    pending = []      # 未表示の新規メッセージキュー
+    current = None    # 現在表示中のメッセージ
+    done = True       # 現在のメッセージ表示が完了したか
     last_fetch = 0.0
 
     try:
         while True:
             now = time.monotonic()
+            
             # 定期的に新しい投稿を取得
             if now - last_fetch >= poll_interval:
                 last_fetch = now
@@ -49,6 +51,7 @@ def main():
                 except Exception as e:
                     print(f'collector fetch error: {e}')
                     new_posts = []
+                
                 fresh = [p for p in new_posts if p.external_id not in seen_ids]
                 if fresh:
                     for p in fresh:
@@ -56,18 +59,29 @@ def main():
                     posts.extend(fresh)
                     posts = posts[-max_buffer:]
                     seen_ids = {p.external_id for p in posts}
-                    messages = build_messages(posts, cfg)
-                    print(f'new posts: {len(fresh)}, total buffered: {len(posts)}')
+                    
+                    # 新規投稿だけからメッセージを生成してpendingに追加
+                    new_msgs = build_messages(fresh, cfg)
+                    for m in new_msgs:
+                        if m.message_type == 'latest_post':
+                            pending.append(m)
+                    print(f'new posts: {len(fresh)}, pending: {len(pending)}')
 
-            # メッセージが空のときはスキップ
-            if not messages:
-                time.sleep(args.sleep)
+            # 表示中のメッセージが終わったら、次の未表示メッセージへ
+            if done:
+                if pending:
+                    current = pending.pop(0)
+                    print(f'display: {current.title}')
+                else:
+                    current = None
+
+            if current:
+                done = out.show(current)
+            else:
+                # 表示するものがない → 短くスリープして待機
+                time.sleep(0.5)
                 continue
 
-            msg = messages[index % len(messages)]
-            done = out.show(msg)
-            if done:
-                index += 1
             time.sleep(args.sleep)
 
     except KeyboardInterrupt:
