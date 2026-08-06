@@ -18,7 +18,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--config', default='config.yaml')
     ap.add_argument('--output', default=None)
-    ap.add_argument('--frames', type=int, default=1000)
+    ap.add_argument('--frames', type=int, default=None)
     ap.add_argument('--sleep', type=float, default=0.05)
     args = ap.parse_args()
     cfg = load_config(args.config)
@@ -37,30 +37,42 @@ def main():
 
     index = 0
     last_fetch = 0.0
-    for _ in range(args.frames):
-        now = time.monotonic()
-        if now - last_fetch >= poll_interval:
-            last_fetch = now
-            try:
-                new_posts = collector.fetch()
-            except Exception as e:
-                print(f'collector fetch error: {e}')
-                new_posts = []
-            fresh = [p for p in new_posts if p.external_id not in seen_ids]
-            if fresh:
-                for p in fresh:
-                    seen_ids.add(p.external_id)
-                posts.extend(fresh)
-                posts = posts[-max_buffer:]
-                seen_ids = {p.external_id for p in posts}
-                messages = build_messages(posts, cfg)
-                print(f'new posts: {len(fresh)}, total buffered: {len(posts)}')
 
-        msg = messages[index % len(messages)]
-        done = out.show(msg)
-        if done:
-            index += 1
-        time.sleep(args.sleep)
+    try:
+        while True:
+            now = time.monotonic()
+            # 定期的に新しい投稿を取得
+            if now - last_fetch >= poll_interval:
+                last_fetch = now
+                try:
+                    new_posts = collector.fetch()
+                except Exception as e:
+                    print(f'collector fetch error: {e}')
+                    new_posts = []
+                fresh = [p for p in new_posts if p.external_id not in seen_ids]
+                if fresh:
+                    for p in fresh:
+                        seen_ids.add(p.external_id)
+                    posts.extend(fresh)
+                    posts = posts[-max_buffer:]
+                    seen_ids = {p.external_id for p in posts}
+                    messages = build_messages(posts, cfg)
+                    print(f'new posts: {len(fresh)}, total buffered: {len(posts)}')
+
+            # メッセージが空のときはスキップ
+            if not messages:
+                time.sleep(args.sleep)
+                continue
+
+            msg = messages[index % len(messages)]
+            done = out.show(msg)
+            if done:
+                index += 1
+            time.sleep(args.sleep)
+
+    except KeyboardInterrupt:
+        print("\nStopped by user.")
+
 
 if __name__ == '__main__':
     main()

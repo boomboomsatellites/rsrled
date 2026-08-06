@@ -2,7 +2,7 @@ app:
   hashtag: "#RSR26"
 
 collector:
-  type: "mock"          # "mock" or "twscrape"
+  type: "twscrape"          # "mock" or "twscrape"
   poll_interval_seconds: 30
   max_buffer: 20
   max_results: 20
@@ -34,10 +34,6 @@ rgb_matrix:
   show_refresh_rate: false
   font_candidates:
     - "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
-    - "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
-    - "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
-    - "/usr/share/fonts/truetype/fonts-japanese-gothic.ttf"
-    - "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 preview:
   scale: 6
@@ -55,7 +51,7 @@ layout:
 
 scroll:
   step_pixels: 2
-  end_hold_frames: 20
+  end_hold_frames: 5
   short_message_frames: 60
 
 message_builder:
