@@ -1,4 +1,4 @@
-import argparse, time
+import argparse, time, threading, queue
 from src.config import load_config
 from src.collectors.factory import create_collector
 from src.analyzers.message_builder import build_messages
@@ -19,7 +19,7 @@ def main():
     ap.add_argument('--config', default='config.yaml')
     ap.add_argument('--output', default=None)
     ap.add_argument('--frames', type=int, default=None)
-    ap.add_argument('--sleep', type=float, default=0.05)
+    ap.add_argument('--sleep', type=float, default=0.01)
     args = ap.parse_args()
     cfg = load_config(args.config)
     output_name = args.output or cfg.get('matrix', {}).get('output', 'console')
@@ -34,40 +34,54 @@ def main():
     seen_ids = set()
     print(f"output={output_name}, collector={collector_cfg.get('type', 'mock')}")
 
-    pending = []      # 未表示の新規メッセージキュー
-    current = None    # 現在表示中のメッセージ
-    done = True       # 現在のメッセージ表示が完了したか
-    last_fetch = 0.0
+    pending = []
+    current = None
+    done = True
 
-    try:
-        while True:
+    # フェッチ結果を受け取るキュー
+    fetch_queue = queue.Queue()
+    stop_event = threading.Event()
+
+    def fetch_worker():
+        """別スレッドで定期fetch。メインループをブロックしない"""
+        last_fetch = 0.0
+        while not stop_event.is_set():
             now = time.monotonic()
-            
-            # 定期的に新しい投稿を取得
             if now - last_fetch >= poll_interval:
                 last_fetch = now
                 try:
                     new_posts = collector.fetch()
+                    fetch_queue.put(new_posts)
                 except Exception as e:
                     print(f'collector fetch error: {e}')
-                    new_posts = []
-                
-                fresh = [p for p in new_posts if p.external_id not in seen_ids]
-                if fresh:
-                    for p in fresh:
-                        seen_ids.add(p.external_id)
-                    posts.extend(fresh)
-                    posts = posts[-max_buffer:]
-                    seen_ids = {p.external_id for p in posts}
-                    
-                    # 新規投稿だけからメッセージを生成してpendingに追加
-                    new_msgs = build_messages(fresh, cfg)
-                    for m in new_msgs:
-                        if m.message_type == 'latest_post':
-                            pending.append(m)
-                    print(f'new posts: {len(fresh)}, pending: {len(pending)}')
+                    fetch_queue.put([])
+            time.sleep(1)
 
-            # 表示中のメッセージが終わったら、次の未表示メッセージへ
+    # フェッチ用スレッド開始
+    fetch_thread = threading.Thread(target=fetch_worker, daemon=True)
+    fetch_thread.start()
+
+    try:
+        while True:
+            # ノンブロッキングでキューから新着を取得
+            while True:
+                try:
+                    new_posts = fetch_queue.get_nowait()
+                    fresh = [p for p in new_posts if p.external_id not in seen_ids]
+                    if fresh:
+                        for p in fresh:
+                            seen_ids.add(p.external_id)
+                        posts.extend(fresh)
+                        posts = posts[-max_buffer:]
+                        seen_ids = {p.external_id for p in posts}
+                        new_msgs = build_messages(fresh, cfg)
+                        for m in new_msgs:
+                            if m.message_type == 'latest_post':
+                                pending.append(m)
+                        print(f'new posts: {len(fresh)}, pending: {len(pending)}')
+                except queue.Empty:
+                    break
+
             if done:
                 if pending:
                     current = pending.pop(0)
@@ -78,13 +92,14 @@ def main():
             if current:
                 done = out.show(current)
             else:
-                # 表示するものがない → 短くスリープして待機
                 time.sleep(0.5)
                 continue
 
             time.sleep(args.sleep)
 
     except KeyboardInterrupt:
+        stop_event.set()
+        fetch_thread.join(timeout=2)
         print("\nStopped by user.")
 
 
