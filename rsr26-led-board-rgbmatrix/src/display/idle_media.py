@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import random
 import time
+from datetime import datetime
 from pathlib import Path
 
 import imageio.v2 as imageio
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageOps
+
+from src.display.textdraw import load_font
 
 
 class IdleMediaPlayer:
@@ -22,6 +25,15 @@ class IdleMediaPlayer:
         self.video_fps_cap = float(media_cfg.get('video_fps_cap', 12.0))
         self.scan_interval_seconds = float(media_cfg.get('scan_interval_seconds', 5.0))
         self.random_mode = bool(media_cfg.get('random', False))
+
+        self.clock_overlay_enabled = bool(media_cfg.get('clock_overlay_enabled', False))
+        self.clock_format = str(media_cfg.get('clock_format', '%H:%M:%S'))
+        self.clock_position = str(media_cfg.get('clock_position', 'bottom_right'))
+        self.clock_margin_x = int(media_cfg.get('clock_margin_x', 2))
+        self.clock_margin_y = int(media_cfg.get('clock_margin_y', 2))
+        self.clock_font_size = int(media_cfg.get('clock_font_size', 8))
+        self.clock_color = tuple(media_cfg.get('clock_color', [220, 220, 220]))
+        self.clock_shadow = bool(media_cfg.get('clock_shadow', True))
 
         self._image_ext = {'.png', '.jpg', '.jpeg', '.bmp', '.webp'}
         self._video_ext = {'.mp4', '.mov', '.avi', '.mkv', '.gif'}
@@ -76,6 +88,36 @@ class IdleMediaPlayer:
             self._current_path = None
             self._current_kind = None
             self._current_image = None
+
+    def _clock_xy(self, text_w, text_h):
+        pos = self.clock_position
+        mx = self.clock_margin_x
+        my = self.clock_margin_y
+        if pos == 'top_left':
+            return mx, my
+        if pos == 'top_right':
+            return max(0, self.width - text_w - mx), my
+        if pos == 'bottom_left':
+            return mx, max(0, self.height - text_h - my)
+        return max(0, self.width - text_w - mx), max(0, self.height - text_h - my)
+
+    def _apply_clock_overlay(self, img: Image.Image) -> Image.Image:
+        if not self.clock_overlay_enabled:
+            return img
+
+        out = img.copy()
+        draw = ImageDraw.Draw(out)
+        font = load_font(self.cfg, self.clock_font_size)
+        text = datetime.now().strftime(self.clock_format)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_w = max(0, bbox[2] - bbox[0])
+        text_h = max(0, bbox[3] - bbox[1])
+        x, y = self._clock_xy(text_w, text_h)
+
+        if self.clock_shadow:
+            draw.text((x + 1, y + 1), text, fill=(0, 0, 0), font=font)
+        draw.text((x, y), text, fill=self.clock_color, font=font)
+        return out
 
     def _close_video(self):
         if self._video_reader is not None:
@@ -146,11 +188,11 @@ class IdleMediaPlayer:
                     except Exception:
                         self._current_path = None
                         return None, 0.2
-            return self._current_image, 0.1
+            return self._apply_clock_overlay(self._current_image), 0.1
 
         if self._current_kind == 'video':
             if now < self._video_next_at and self._video_last_frame is not None:
-                return self._video_last_frame, 0.02
+                return self._apply_clock_overlay(self._video_last_frame), 0.02
 
             try:
                 frame = self._video_reader.get_next_data()
@@ -158,7 +200,7 @@ class IdleMediaPlayer:
                 img = self._fit(img)
                 self._video_last_frame = img
                 self._video_next_at = now + self._video_frame_interval
-                return img, max(0.01, self._video_frame_interval)
+                return self._apply_clock_overlay(img), max(0.01, self._video_frame_interval)
             except Exception:
                 path = self._next_path()
                 self._current_path = None

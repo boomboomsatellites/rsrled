@@ -40,10 +40,19 @@ idle_media:
   video_fps_cap: 12
   random: false
   scan_interval_seconds: 5
+  clock_overlay_enabled: true
+  clock_format: "%H:%M:%S"
+  clock_position: "bottom_right"
+  clock_margin_x: 2
+  clock_margin_y: 2
+  clock_font_size: 8
+  clock_color: [220, 220, 220]
+  clock_shadow: true
 ```
 
 - `folder` に配置した `png/jpg/webp/mp4/gif` などを再生します。
 - 新しい投稿が来たら投稿表示が優先されます。
+- `clock_overlay_enabled: true` で待機メディア上に現在時刻を重ねます。
 
 ## 絵文字の豆腐化対策
 
