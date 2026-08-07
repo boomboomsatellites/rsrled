@@ -28,6 +28,89 @@ scroll:
 - `end_hold_frames`: 最後まで流れた後の待ち時間。
 - `short_message_frames`: スクロール不要な短文の表示フレーム数。
 
+## 待機中メディア表示（画像 / 動画）
+
+投稿待ちの間は、指定フォルダの素材を自動再生できます。
+
+```yaml
+idle_media:
+  enabled: true
+  folder: "idle_media"
+  image_seconds: 5
+  video_fps_cap: 12
+  random: false
+  scan_interval_seconds: 5
+```
+
+- `folder` に配置した `png/jpg/webp/mp4/gif` などを再生します。
+- 新しい投稿が来たら投稿表示が優先されます。
+
+## 絵文字の豆腐化対策
+
+低解像度LEDとフォント制約で絵文字が豆腐化しやすいため、表示直前に
+絵文字を短いテキストへ展開できます（例: 😀 → grinning face）。
+
+```yaml
+display:
+  emoji_demojize: true
+  emoji_demojize_mode: "missing_only" # "missing_only" or "all"
+```
+
+加えて、フォント候補に絵文字フォントを追加すると表示品質が上がります。
+
+Ubuntu (Raspberry Pi OS / Ubuntu系) での導入例:
+
+```bash
+sudo apt update
+sudo apt install -y fonts-noto-color-emoji fonts-symbola
+fc-cache -f -v
+```
+
+環境によって `fonts-symbola` が見つからない場合は、次を試してください。
+
+```bash
+sudo apt install -y ttf-ancient-fonts
+fc-cache -f -v
+```
+
+インストール確認:
+
+```bash
+fc-list | grep -E "NotoColorEmoji|Symbola"
+```
+
+`config.yaml` の `rgb_matrix.font_candidates` には以下を指定します。
+
+```yaml
+rgb_matrix:
+  font_candidates:
+    - "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+    - "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+    - "/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf"
+```
+
+- `missing_only`: 描ける絵文字はそのまま表示し、描けない絵文字だけテキスト化
+- `all`: 従来通り、絵文字をすべてテキスト化
+
+## iPhoneから文言・モード切替（Flask）
+
+同一LAN内のiPhone Safariから、表示モード切替と手動メッセージ投入ができます。
+
+```yaml
+remote_control:
+  enabled: true
+  host: "0.0.0.0"
+  port: 5000
+  token: "change-me"
+```
+
+起動後に `http://<RaspberryPiのIP>:5000` へアクセスしてください。
+
+- mode: `auto` / `text_only` / `media_only` / `pause`
+- manual message: タイトルと本文をキュー投入
+
+`token` は必ず変更してください。空文字にすると認証なしで公開されます。
+
 ## 次の予定カウントダウン表示
 
 投稿待機中（新しい投稿が来るまでの間）は、タイムテーブルから次の予定を取得して

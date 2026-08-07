@@ -26,3 +26,7 @@ class ConsoleOutput:
         print('|' + body[:self.width].ljust(self.width) + '|')
         print('+' + '-' * self.width + '+')
         return done
+
+    def show_image(self, image):
+        print('[idle media frame]')
+        return True

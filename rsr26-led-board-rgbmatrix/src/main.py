@@ -3,6 +3,8 @@ from src.models import DisplayMessage
 from src.config import load_config
 from src.collectors.factory import create_collector
 from src.analyzers.message_builder import build_messages
+from src.control.web_control import RemoteControlState, start_web_control
+from src.display.idle_media import IdleMediaPlayer
 from src.outputs.console_output import ConsoleOutput
 from src.outputs.preview_output import PreviewOutput
 from src.outputs.rgb_matrix_output import RGBMatrixOutput
@@ -32,6 +34,13 @@ def main():
 
     collector = create_collector(cfg)
     out = make_output(output_name, cfg)
+    idle_media = IdleMediaPlayer(cfg)
+
+    control_state = RemoteControlState()
+    web_thread = start_web_control(cfg, control_state)
+    if web_thread:
+        rcfg = cfg.get('remote_control', {})
+        print(f"remote control enabled: http://{rcfg.get('host', '0.0.0.0')}:{rcfg.get('port', 5000)}")
 
     # タイムテーブルスケジューラ初期化
     interrupt_queue = queue.Queue()
@@ -105,12 +114,17 @@ def main():
                     break
 
             if done:
+                mode = control_state.get_mode()
                 # 割り込みキューを通常キューより優先して取り出す
                 try:
                     current = interrupt_queue.get_nowait()
                     print(f'[INTERRUPT] {current.title}: {current.body}')
                 except queue.Empty:
-                    if pending:
+                    manual = control_state.pop_message()
+                    if manual:
+                        current = manual
+                        print(f'[MANUAL] {current.title}: {current.body}')
+                    elif mode in ('auto', 'text_only') and pending:
                         current = pending.pop(0)
                         print(f'display: {current.title}')
                     else:
@@ -119,7 +133,16 @@ def main():
             if current:
                 done = out.show(current)
             else:
-                if scheduler and countdown_enabled:
+                mode = control_state.get_mode()
+
+                if mode in ('auto', 'media_only'):
+                    frame, wait_s = idle_media.next_frame()
+                    if frame is not None and hasattr(out, 'show_image'):
+                        out.show_image(frame)
+                        time.sleep(max(0.01, wait_s))
+                        continue
+
+                if mode in ('auto', 'text_only') and scheduler and countdown_enabled:
                     now = time.monotonic()
                     if now - last_countdown >= max(0.2, countdown_refresh_seconds):
                         entry, remain = scheduler.next_entry()

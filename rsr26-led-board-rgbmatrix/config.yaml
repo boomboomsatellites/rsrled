@@ -34,6 +34,8 @@ rgb_matrix:
   show_refresh_rate: false
   font_candidates:
     - "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
+    - "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
+    - "/usr/share/fonts/truetype/ancient-scripts/Symbola_hint.ttf"
 
 preview:
   scale: 6
@@ -63,3 +65,21 @@ scheduler:
   advance_minutes: 10
   countdown_enabled: true
   countdown_refresh_seconds: 1.0
+
+display:
+  emoji_demojize: true
+  emoji_demojize_mode: "missing_only"  # "missing_only" or "all"
+
+idle_media:
+  enabled: true
+  folder: "idle_media"
+  image_seconds: 5
+  video_fps_cap: 12
+  random: false
+  scan_interval_seconds: 5
+
+remote_control:
+  enabled: true
+  host: "0.0.0.0"
+  port: 5000
+  token: "change-me"

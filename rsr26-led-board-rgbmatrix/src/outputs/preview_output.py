@@ -22,6 +22,10 @@ class PreviewOutput:
             short_frames=int(self.scroll.get('short_message_frames', 60)),
         )
         img = render_message_image(self.cfg, message, scroll_offset=offset)
-        img = img.resize((img.width * self.scale, img.height * self.scale), Image.NEAREST)
-        img.show()
+        self.show_image(img)
         return done
+
+    def show_image(self, img):
+        img = img.resize((img.width * self.scale, img.height * self.scale), Image.NEAREST)
+        img.save('preview_frame.png')
+        return True
