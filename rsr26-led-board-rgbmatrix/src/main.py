@@ -1,10 +1,11 @@
-import argparse, time, threading, queue
+import argparse, time, threading, queue, os
 from src.config import load_config
 from src.collectors.factory import create_collector
 from src.analyzers.message_builder import build_messages
 from src.outputs.console_output import ConsoleOutput
 from src.outputs.preview_output import PreviewOutput
 from src.outputs.rgb_matrix_output import RGBMatrixOutput
+from src.scheduler.timetable_scheduler import TimetableScheduler
 
 
 def make_output(name, cfg):
@@ -20,6 +21,7 @@ def main():
     ap.add_argument('--output', default=None)
     ap.add_argument('--frames', type=int, default=None)
     ap.add_argument('--sleep', type=float, default=0.01)
+    ap.add_argument('--timetable', default=None)
     args = ap.parse_args()
     cfg = load_config(args.config)
     output_name = args.output or cfg.get('matrix', {}).get('output', 'console')
@@ -29,6 +31,18 @@ def main():
 
     collector = create_collector(cfg)
     out = make_output(output_name, cfg)
+
+    # タイムテーブルスケジューラ初期化
+    interrupt_queue = queue.Queue()
+    scheduler_cfg = cfg.get('scheduler', {})
+    timetable_path = args.timetable or scheduler_cfg.get('timetable_path', 'timetable.yaml')
+    advance_minutes = int(scheduler_cfg.get('advance_minutes', 10))
+    if os.path.exists(timetable_path):
+        scheduler = TimetableScheduler(timetable_path, interrupt_queue, advance_minutes)
+        print(f"timetable loaded: {timetable_path} (advance={advance_minutes}min)")
+    else:
+        scheduler = None
+        print(f"timetable not found: {timetable_path}, scheduler disabled")
 
     posts = []
     seen_ids = set()
@@ -63,6 +77,10 @@ def main():
 
     try:
         while True:
+            # タイムテーブル割り込みチェック
+            if scheduler:
+                scheduler.tick()
+
             # ノンブロッキングでキューから新着を取得
             while True:
                 try:
@@ -83,11 +101,16 @@ def main():
                     break
 
             if done:
-                if pending:
-                    current = pending.pop(0)
-                    print(f'display: {current.title}')
-                else:
-                    current = None
+                # 割り込みキューを通常キューより優先して取り出す
+                try:
+                    current = interrupt_queue.get_nowait()
+                    print(f'[INTERRUPT] {current.title}: {current.body}')
+                except queue.Empty:
+                    if pending:
+                        current = pending.pop(0)
+                        print(f'display: {current.title}')
+                    else:
+                        current = None
 
             if current:
                 done = out.show(current)

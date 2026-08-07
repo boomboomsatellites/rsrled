@@ -57,3 +57,7 @@ scroll:
 message_builder:
   title_text: "#RSR26 LIVE"
   latest_post_prefix: ">"
+
+scheduler:
+  timetable_path: "timetable.yaml"
+  advance_minutes: 10
