@@ -61,3 +61,18 @@ class TimetableScheduler:
                     priority=100,
                 )
                 self.interrupt_queue.put(msg)
+
+    def next_entry(self):
+        """Return the nearest upcoming timetable entry and remaining seconds.
+
+        Returns:
+            tuple[dict | None, int | None]: (entry, remaining_seconds)
+        """
+        now = datetime.now()
+        upcoming = [e for e in self.entries if e['start_dt'] >= now]
+        if not upcoming:
+            return None, None
+
+        nxt = min(upcoming, key=lambda e: e['start_dt'])
+        remaining = int((nxt['start_dt'] - now).total_seconds())
+        return nxt, max(0, remaining)

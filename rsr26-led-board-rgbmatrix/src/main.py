@@ -1,4 +1,5 @@
 import argparse, time, threading, queue, os
+from src.models import DisplayMessage
 from src.config import load_config
 from src.collectors.factory import create_collector
 from src.analyzers.message_builder import build_messages
@@ -37,6 +38,8 @@ def main():
     scheduler_cfg = cfg.get('scheduler', {})
     timetable_path = args.timetable or scheduler_cfg.get('timetable_path', 'timetable.yaml')
     advance_minutes = int(scheduler_cfg.get('advance_minutes', 10))
+    countdown_enabled = bool(scheduler_cfg.get('countdown_enabled', True))
+    countdown_refresh_seconds = float(scheduler_cfg.get('countdown_refresh_seconds', 1.0))
     if os.path.exists(timetable_path):
         scheduler = TimetableScheduler(timetable_path, interrupt_queue, advance_minutes)
         print(f"timetable loaded: {timetable_path} (advance={advance_minutes}min)")
@@ -51,6 +54,7 @@ def main():
     pending = []
     current = None
     done = True
+    last_countdown = 0.0
 
     # フェッチ結果を受け取るキュー
     fetch_queue = queue.Queue()
@@ -115,7 +119,25 @@ def main():
             if current:
                 done = out.show(current)
             else:
-                time.sleep(0.5)
+                if scheduler and countdown_enabled:
+                    now = time.monotonic()
+                    if now - last_countdown >= max(0.2, countdown_refresh_seconds):
+                        entry, remain = scheduler.next_entry()
+                        if entry and remain is not None:
+                            mm, ss = divmod(remain, 60)
+                            hh, mm = divmod(mm, 60)
+                            if hh > 0:
+                                remain_text = f"{hh:02d}:{mm:02d}:{ss:02d}"
+                            else:
+                                remain_text = f"{mm:02d}:{ss:02d}"
+                            countdown_msg = DisplayMessage(
+                                message_type='countdown',
+                                title=f"NEXT: {entry['stage']}",
+                                body=f"{entry['artist']} まで {remain_text}",
+                            )
+                            out.show(countdown_msg)
+                        last_countdown = now
+                time.sleep(0.1)
                 continue
 
             time.sleep(args.sleep)

@@ -28,6 +28,22 @@ scroll:
 - `end_hold_frames`: 最後まで流れた後の待ち時間。
 - `short_message_frames`: スクロール不要な短文の表示フレーム数。
 
+## 次の予定カウントダウン表示
+
+投稿待機中（新しい投稿が来るまでの間）は、タイムテーブルから次の予定を取得して
+`NEXT: ステージ名` / `出演者 まで MM:SS` を表示できます。
+
+```yaml
+scheduler:
+  timetable_path: "timetable.yaml"
+  advance_minutes: 10
+  countdown_enabled: true
+  countdown_refresh_seconds: 1.0
+```
+
+- `countdown_enabled`: `true` で待機中にカウントダウンを表示
+- `countdown_refresh_seconds`: 表示更新間隔（秒）
+
 ## 反映済みの見やすさ改善
 
 - 本文色を白に変更

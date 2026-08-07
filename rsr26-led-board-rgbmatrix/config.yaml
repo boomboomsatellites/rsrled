@@ -61,3 +61,5 @@ message_builder:
 scheduler:
   timetable_path: "timetable.yaml"
   advance_minutes: 10
+  countdown_enabled: true
+  countdown_refresh_seconds: 1.0
