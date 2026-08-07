@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -12,6 +13,9 @@ except Exception:
 
 _font_list_cache = {}
 _missing_sig_cache = {}
+_font_support_cache = {}
+_pick_font_cache = {}
+_token_width_cache = {}
 
 
 def load_fonts(cfg, size):
@@ -59,13 +63,23 @@ def font_supports_text(font, text):
         return True
     if text.isspace():
         return True
+
+    cache_key = (id(font), text)
+    if cache_key in _font_support_cache:
+        return _font_support_cache[cache_key]
+
     sig = _glyph_signature(font, text)
     if sig is None:
+        _font_support_cache[cache_key] = False
         return False
     missing_sig = _missing_signature(font)
     if missing_sig is None:
+        _font_support_cache[cache_key] = True
         return True
-    return sig != missing_sig
+
+    supported = sig != missing_sig
+    _font_support_cache[cache_key] = supported
+    return supported
 
 
 def has_font_for_text(cfg, size, text):
@@ -75,16 +89,17 @@ def has_font_for_text(cfg, size, text):
     return False
 
 
+@lru_cache(maxsize=2048)
 def _emoji_spans(text):
     if emoji is None:
-        return []
+        return ()
     try:
-        return [
+        return tuple(
             (item['match_start'], item['match_end'], item['emoji'])
             for item in emoji.emoji_list(text)
-        ]
+        )
     except Exception:
-        return []
+        return ()
 
 
 def _iter_tokens(text):
@@ -103,16 +118,30 @@ def _iter_tokens(text):
 
 
 def _pick_font(cfg, size, token):
+    font_key = (size, tuple(cfg.get('rgb_matrix', {}).get('font_candidates', [])), token)
+    cached = _pick_font_cache.get(font_key)
+    if cached is not None:
+        return cached
+
     fonts = load_fonts(cfg, size)
     for font in fonts:
         if font_supports_text(font, token):
+            _pick_font_cache[font_key] = font
             return font
+    _pick_font_cache[font_key] = fonts[0]
     return fonts[0]
 
 
 def _token_width(draw, token, font):
+    cache_key = (id(font), token)
+    cached = _token_width_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     bbox = draw.textbbox((0, 0), token, font=font)
-    return max(0, bbox[2] - bbox[0])
+    width = max(0, bbox[2] - bbox[0])
+    _token_width_cache[cache_key] = width
+    return width
 
 
 def measure_text_width(cfg, text, size):

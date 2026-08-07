@@ -12,14 +12,49 @@ def _scale(color, brightness):
     return tuple(int(c * factor) for c in color)
 
 
-def text_width(cfg, text, font_size=None):
-    size = font_size or int(cfg.get('layout', {}).get('body_font_size', 16))
-    text = normalize_display_text(
-        text or '',
+_normalized_text_cache = {}
+_text_width_cache = {}
+
+
+def _normalize_for_size(cfg, text, size):
+    display_cfg = cfg.get('display', {})
+    key = (
+        size,
+        tuple(cfg.get('rgb_matrix', {}).get('font_candidates', [])),
+        bool(display_cfg.get('emoji_demojize', True)),
+        str(display_cfg.get('emoji_demojize_mode', 'missing_only')).lower(),
+        text,
+    )
+    cached = _normalized_text_cache.get(key)
+    if cached is not None:
+        return cached
+
+    normalized = normalize_display_text(
+        text,
         cfg,
         can_render_emoji=lambda token: has_font_for_text(cfg, size, token),
     )
-    return measure_text_width(cfg, text, size)
+    _normalized_text_cache[key] = normalized
+    return normalized
+
+
+def text_width(cfg, text, font_size=None):
+    size = font_size or int(cfg.get('layout', {}).get('body_font_size', 16))
+    text = text or ''
+    key = (
+        size,
+        tuple(cfg.get('rgb_matrix', {}).get('font_candidates', [])),
+        tuple(sorted((cfg.get('display', {}) or {}).items())),
+        text,
+    )
+    cached = _text_width_cache.get(key)
+    if cached is not None:
+        return cached
+
+    normalized = _normalize_for_size(cfg, text, size)
+    width = measure_text_width(cfg, normalized, size)
+    _text_width_cache[key] = width
+    return width
 
 
 _font_cache = {}
@@ -58,16 +93,8 @@ def render_message_image(cfg, message, scroll_offset=2):
 
     title_size = int(layout.get('title_font_size', 12))
     body_size = int(layout.get('body_font_size', 16))
-    title = normalize_display_text(
-        (message.title or '')[:20],
-        cfg,
-        can_render_emoji=lambda token: has_font_for_text(cfg, title_size, token),
-    )
-    body = normalize_display_text(
-        (message.body or '').replace('\n', ' ').replace('\r', ' '),
-        cfg,
-        can_render_emoji=lambda token: has_font_for_text(cfg, body_size, token),
-    )
+    title = _normalize_for_size(cfg, (message.title or '')[:20], title_size)
+    body = _normalize_for_size(cfg, (message.body or '').replace('\n', ' ').replace('\r', ' '), body_size)
     title_color = red if message.message_type == 'caution' else amber
 
     draw_text_bold(draw, (2, title_y), title, title_color, title_font, bold=bold, cfg=cfg, font_size=title_size)
@@ -109,17 +136,14 @@ class RGBMatrixOutput:
 
     def show(self, message):
         body_size = int(self.cfg.get('layout', {}).get('body_font_size', 16))
-        body = normalize_display_text(
-            (message.body or '').replace('\n', ' ').replace('\r', ' '),
-            self.cfg,
-            can_render_emoji=lambda token: has_font_for_text(self.cfg, body_size, token),
-        )
+        body = _normalize_for_size(self.cfg, (message.body or '').replace('\n', ' ').replace('\r', ' '), body_size)
         panel_width = int(self.cfg.get('matrix', {}).get('width', 128))
         panel_height = int(self.cfg.get('matrix', {}).get('height', 64))
 
-        if body not in self._tw_cache:
-            self._tw_cache[body] = text_width(self.cfg, body)
-        tw = self._tw_cache[body]
+        tw_key = (body_size, body)
+        if tw_key not in self._tw_cache:
+            self._tw_cache[tw_key] = measure_text_width(self.cfg, body, body_size)
+        tw = self._tw_cache[tw_key]
 
         key = f'{message.message_type}:{message.title}:{message.body}'
         offset, done = self.state.frame(
@@ -159,11 +183,7 @@ class RGBMatrixOutput:
             self._bg_cache[bg_key] = bg
 
         # タイトル画像を別キャッシュ
-        title = normalize_display_text(
-            (message.title or '')[:20],
-            self.cfg,
-            can_render_emoji=lambda token: has_font_for_text(self.cfg, title_size, token),
-        )
+        title = _normalize_for_size(self.cfg, (message.title or '')[:20], title_size)
         title_key = f"title:{title}:{message.message_type}:{brightness}:{bold}"
         if title_key not in self._bg_cache:
             title_img = Image.new('RGB', (panel_width, panel_height), 'black')

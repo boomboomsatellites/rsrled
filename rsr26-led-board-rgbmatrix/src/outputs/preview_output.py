@@ -9,6 +9,7 @@ class PreviewOutput:
         self.state = MarqueeState()
         self.scroll = cfg.get('scroll', {})
         self.scale = cfg.get('preview', {}).get('scale', 6)
+        self._last_frame_signature = None
 
     def show(self, message):
         body = (message.body or '').replace('\n', ' ').replace('\r', ' ')
@@ -27,5 +28,10 @@ class PreviewOutput:
 
     def show_image(self, img):
         img = img.resize((img.width * self.scale, img.height * self.scale), Image.NEAREST)
+        signature = (img.size, hash(img.tobytes()))
+        if signature == self._last_frame_signature:
+            return True
+
         img.save('preview_frame.png')
+        self._last_frame_signature = signature
         return True

@@ -34,6 +34,12 @@ class IdleMediaPlayer:
         self.clock_font_size = int(media_cfg.get('clock_font_size', 8))
         self.clock_color = tuple(media_cfg.get('clock_color', [220, 220, 220]))
         self.clock_shadow = bool(media_cfg.get('clock_shadow', True))
+        self._clock_font = load_font(self.cfg, self.clock_font_size)
+        self._clock_last_text = None
+        self._clock_stamp = None
+        self._clock_stamp_pos = (0, 0)
+        self._overlay_cache_key = None
+        self._overlay_cache_image = None
 
         self._image_ext = {'.png', '.jpg', '.jpeg', '.bmp', '.webp'}
         self._video_ext = {'.mp4', '.mov', '.avi', '.mkv', '.gif'}
@@ -88,6 +94,8 @@ class IdleMediaPlayer:
             self._current_path = None
             self._current_kind = None
             self._current_image = None
+            self._overlay_cache_key = None
+            self._overlay_cache_image = None
 
     def _clock_xy(self, text_w, text_h):
         pos = self.clock_position
@@ -105,18 +113,35 @@ class IdleMediaPlayer:
         if not self.clock_overlay_enabled:
             return img
 
-        out = img.copy()
-        draw = ImageDraw.Draw(out)
-        font = load_font(self.cfg, self.clock_font_size)
         text = datetime.now().strftime(self.clock_format)
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_w = max(0, bbox[2] - bbox[0])
-        text_h = max(0, bbox[3] - bbox[1])
-        x, y = self._clock_xy(text_w, text_h)
+        if text != self._clock_last_text or self._clock_stamp is None:
+            probe = Image.new('RGB', (1, 1), 'black')
+            probe_draw = ImageDraw.Draw(probe)
+            bbox = probe_draw.textbbox((0, 0), text, font=self._clock_font)
+            text_w = max(0, bbox[2] - bbox[0])
+            text_h = max(0, bbox[3] - bbox[1])
+            stamp_w = text_w + (1 if self.clock_shadow else 0)
+            stamp_h = text_h + (1 if self.clock_shadow else 0)
+            stamp = Image.new('RGBA', (max(1, stamp_w), max(1, stamp_h)), (0, 0, 0, 0))
+            stamp_draw = ImageDraw.Draw(stamp)
+            if self.clock_shadow:
+                stamp_draw.text((1, 1), text, fill=(0, 0, 0, 255), font=self._clock_font)
+            stamp_draw.text((0, 0), text, fill=(*self.clock_color, 255), font=self._clock_font)
 
-        if self.clock_shadow:
-            draw.text((x + 1, y + 1), text, fill=(0, 0, 0), font=font)
-        draw.text((x, y), text, fill=self.clock_color, font=font)
+            self._clock_stamp = stamp
+            self._clock_stamp_pos = self._clock_xy(stamp.width, stamp.height)
+            self._clock_last_text = text
+            self._overlay_cache_key = None
+            self._overlay_cache_image = None
+
+        cache_key = (id(img), self._clock_last_text)
+        if cache_key == self._overlay_cache_key and self._overlay_cache_image is not None:
+            return self._overlay_cache_image
+
+        out = img.copy()
+        out.paste(self._clock_stamp, self._clock_stamp_pos, self._clock_stamp)
+        self._overlay_cache_key = cache_key
+        self._overlay_cache_image = out
         return out
 
     def _close_video(self):
