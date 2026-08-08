@@ -54,10 +54,11 @@ class TimetableScheduler:
                 continue
             if e['trigger_dt'] <= now < e['start_dt']:
                 self.fired.add(e['key'])
+                start_str = e['start_dt'].strftime('%H:%M')
                 msg = DisplayMessage(
                     message_type='interrupt',
                     title=f"NEXT: {e['stage']}",
-                    body=f"{e['artist']} まもなくスタート！",
+                    body=f"{start_str}〜 {e['artist']} まもなくスタート！",
                     priority=100,
                 )
                 self.interrupt_queue.put(msg)

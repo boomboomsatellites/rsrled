@@ -1,6 +1,8 @@
 import asyncio
+import json
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 
 from src.models import Post
 
@@ -22,6 +24,8 @@ class TwscrapeCollector:
       best-effort: keep a fallback collector ready in case it stops working.
     - Only new posts (id greater than the last seen id) are returned on each
       call, so repeated polling does not re-emit the same posts.
+    - The last-seen id is persisted to disk (state_path) so that restarting
+      the process does not re-fetch/re-display already-seen posts.
     """
 
     def __init__(self, cfg):
@@ -31,8 +35,30 @@ class TwscrapeCollector:
         self.max_results = int(collector_cfg.get('max_results', 20))
         self.exclude_retweets = bool(collector_cfg.get('exclude_retweets', True))
         self.db_path = collector_cfg.get('db_path', 'accounts.db')
+        self.state_path = Path(collector_cfg.get('state_path', 'twscrape_state.json'))
         self._api = None
-        self.since_id = None
+        self.since_id = self._load_since_id()
+
+    def _load_since_id(self):
+        try:
+            if self.state_path.exists():
+                data = json.loads(self.state_path.read_text(encoding='utf-8'))
+                since_id = data.get('since_id')
+                if since_id is not None:
+                    logger.info(f'twscrape: resuming from since_id={since_id}')
+                    return int(since_id)
+        except Exception:
+            logger.exception('twscrape: failed to load state; starting fresh')
+        return None
+
+    def _save_since_id(self):
+        try:
+            self.state_path.write_text(
+                json.dumps({'since_id': self.since_id}),
+                encoding='utf-8',
+            )
+        except Exception:
+            logger.exception('twscrape: failed to persist state')
 
     def _get_api(self):
         if self._api is None:
@@ -67,6 +93,7 @@ class TwscrapeCollector:
 
         raw.sort(key=lambda t: t.id)
         self.since_id = raw[-1].id
+        self._save_since_id()
 
         posts = []
         for tweet in raw:

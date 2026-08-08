@@ -12,6 +12,27 @@ def _scale(color, brightness):
     return tuple(int(c * factor) for c in color)
 
 
+# タイトル用カラーパレット（黒背景で視認性の良い10色）
+TITLE_COLOR_PALETTE = [
+    (255, 190, 45),   # amber
+    (0, 220, 220),    # cyan
+    (255, 60, 220),   # magenta
+    (140, 255, 60),   # lime
+    (255, 120, 40),   # orange
+    (60, 160, 255),   # sky blue
+    (255, 90, 150),   # pink
+    (255, 230, 60),   # yellow
+    (170, 90, 255),   # purple
+    (60, 255, 180),   # mint
+]
+
+
+def _pick_title_color(message):
+    """投稿内容から決定的にパレットの色を選ぶ（同じ投稿は常に同じ色）。"""
+    key = f'{message.title}:{message.body}:{getattr(message, "posted_at", "")}'
+    idx = hash(key) % len(TITLE_COLOR_PALETTE)
+    return TITLE_COLOR_PALETTE[idx]
+
 _normalized_text_cache = {}
 _text_width_cache = {}
 
@@ -95,7 +116,7 @@ def render_message_image(cfg, message, scroll_offset=2):
     body_size = int(layout.get('body_font_size', 16))
     title = _normalize_for_size(cfg, (message.title or '')[:20], title_size)
     body = _normalize_for_size(cfg, (message.body or '').replace('\n', ' ').replace('\r', ' '), body_size)
-    title_color = red if message.message_type == 'caution' else amber
+    title_color = red if message.message_type == 'caution' else _scale(_pick_title_color(message), brightness)
 
     draw_text_bold(draw, (2, title_y), title, title_color, title_font, bold=bold, cfg=cfg, font_size=title_size)
     draw.line((0, sep_y, width, sep_y), fill=gray)
@@ -182,15 +203,15 @@ class RGBMatrixOutput:
             draw.line((0, sep_y, panel_width, sep_y), fill=gray)
             self._bg_cache[bg_key] = bg
 
-        # タイトル画像を別キャッシュ
+        # タイトル画像を別キャッシュ（投稿ごとに色が変わるため、色決定キーもキャッシュキーに含める）
         title = _normalize_for_size(self.cfg, (message.title or '')[:20], title_size)
-        title_key = f"title:{title}:{message.message_type}:{brightness}:{bold}"
+        title_color_key = _pick_title_color(message)
+        title_key = f"title:{title}:{message.message_type}:{brightness}:{bold}:{title_color_key}"
         if title_key not in self._bg_cache:
             title_img = Image.new('RGB', (panel_width, panel_height), 'black')
             draw = ImageDraw.Draw(title_img)
-            amber = _scale((255, 190, 45), brightness)
             red = _scale((255, 80, 60), brightness)
-            title_color = red if message.message_type == 'caution' else amber
+            title_color = red if message.message_type == 'caution' else _scale(title_color_key, brightness)
             title_y = int(layout.get('title_y', 4))
             draw_text_bold(draw, (2, title_y), title, title_color, title_font, bold=bold, cfg=self.cfg, font_size=title_size)
             self._bg_cache[title_key] = title_img
@@ -245,7 +266,7 @@ class RGBMatrixOutput:
                 gray = _scale((120, 120, 120), brightness)
                 tw_time = text_width(self.cfg, time_str, time_font_size)
                 time_x = panel_width - tw_time - 2
-                time_y = panel_height - time_font_size - 2
+                time_y = panel_height - time_font_size - 3
                 draw = ImageDraw.Draw(result)
                 draw.text((time_x, time_y), time_str, fill=gray, font=time_font)
         

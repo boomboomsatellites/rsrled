@@ -4,11 +4,11 @@ app:
 collector:
   type: "twscrape"          # "mock" or "twscrape"
   poll_interval_seconds: 30
-  max_buffer: 20
-  max_results: 20
+  max_buffer: 15
+  max_results: 15
   exclude_retweets: true
   db_path: "accounts.db"  # twscrape accounts DB, see README for setup
-
+  state_path: "twscrape_state.json"  # 新規追加
 matrix:
   width: 128
   height: 64
@@ -45,10 +45,10 @@ console:
 
 layout:
   title_font_size: 12
-  body_font_size: 16
-  title_y: 4
+  body_font_size: 17
+  title_y: 2
   separator_y: 20
-  body_y: 26
+  body_y: 24
   bold_px: 1
 
 scroll:
@@ -57,6 +57,8 @@ scroll:
   short_message_frames: 60
 
 message_builder:
+  filters:
+    remove_urls: true
   title_text: "#RSR26 LIVE"
   latest_post_prefix: ">"
 

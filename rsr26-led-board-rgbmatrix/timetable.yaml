@@ -1,4 +1,22 @@
 timetable:
+  - date: "2026-08-08"
+    entries:
+      # SUN STAGE
+      - time: "22:50"
+        stage: "SUN STAGE"
+        artist: "04 Limited Sazabys"
+      # SUN STAGE
+      - time: "23:00"
+        stage: "BLUE STAGE"
+        artist: "04 Limited Sazabys"
+      # SUN STAGE
+      - time: "23:52"
+        stage: "EARTH TENT"
+        artist: "04 Limited Sazabys"
+      - time: "23:52"
+        stage: "PEACE TENT"
+        artist: "05 Limited Sazabys"
+
   - date: "2026-08-14"
     entries:
       # SUN STAGE
