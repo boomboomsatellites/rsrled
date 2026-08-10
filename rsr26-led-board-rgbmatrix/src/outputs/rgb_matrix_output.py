@@ -135,6 +135,9 @@ class RGBMatrixOutput:
         rgb = cfg.get('rgb_matrix', {})
         matrix_cfg = cfg.get('matrix', {})
         options = RGBMatrixOptions()
+        options.drop_privileges = False
+        options.daemon = False
+
         options.rows = int(rgb.get('rows', matrix_cfg.get('height', 64)))
         options.cols = int(rgb.get('cols', matrix_cfg.get('width', 128)))
         options.chain_length = int(rgb.get('chain_length', 1))

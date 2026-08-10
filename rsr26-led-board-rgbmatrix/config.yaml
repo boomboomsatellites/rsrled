@@ -7,8 +7,8 @@ collector:
   max_buffer: 20
   max_results: 20
   exclude_retweets: true
-  db_path: "accounts.db"  # twscrape accounts DB, see README for setup
-  state_path: "twscrape_state.json"  # 再起動しても続きから取得するための状態ファイル
+  db_path: "/opt/rsrled-data/accounts.db"
+  state_path: "/opt/rsrled-data/twscrape_state.json"
 
 matrix:
   width: 128
@@ -28,7 +28,7 @@ rgb_matrix:
   hardware_mapping: "regular"
   gpio_slowdown: 3
   brightness: 60
-  disable_hardware_pulsing: true
+  disable_hardware_pulsing: false
   multiplexing: 0
   pwm_bits: 8
   led_rgb_sequence: "BRG"
