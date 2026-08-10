@@ -33,6 +33,7 @@ def _pick_title_color(message):
     idx = hash(key) % len(TITLE_COLOR_PALETTE)
     return TITLE_COLOR_PALETTE[idx]
 
+
 _normalized_text_cache = {}
 _text_width_cache = {}
 
@@ -103,7 +104,6 @@ def render_message_image(cfg, message, scroll_offset=2):
     body_font = get_cached_font(cfg, int(layout.get('body_font_size', 16)))
     bold = int(layout.get('bold_px', 1))
 
-    amber = _scale((255, 190, 45), brightness)
     white = _scale((255, 255, 255), brightness)
     gray = _scale((70, 70, 70), brightness)
     red = _scale((255, 80, 60), brightness)

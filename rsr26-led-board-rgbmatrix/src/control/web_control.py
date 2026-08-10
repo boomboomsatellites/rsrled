@@ -9,10 +9,11 @@ from src.models import DisplayMessage
 
 
 class RemoteControlState:
-    def __init__(self):
+    def __init__(self, default_hashtag: str = '#RSR26'):
         self._mode = 'auto'
         self._lock = threading.Lock()
         self._messages = Queue()
+        self._hashtag = default_hashtag
 
     def set_mode(self, mode: str):
         allowed = {'auto', 'text_only', 'media_only', 'pause'}
@@ -24,6 +25,19 @@ class RemoteControlState:
     def get_mode(self) -> str:
         with self._lock:
             return self._mode
+
+    def set_hashtag(self, hashtag: str):
+        hashtag = (hashtag or '').strip()
+        if not hashtag:
+            raise ValueError('hashtag must not be empty')
+        if not hashtag.startswith('#'):
+            hashtag = f'#{hashtag}'
+        with self._lock:
+            self._hashtag = hashtag
+
+    def get_hashtag(self) -> str:
+        with self._lock:
+            return self._hashtag
 
     def enqueue_message(self, title: str, body: str):
         title = (title or 'MANUAL')[:20]
@@ -41,6 +55,7 @@ class RemoteControlState:
     def snapshot(self):
         return {
             'mode': self.get_mode(),
+            'hashtag': self.get_hashtag(),
             'pending_manual_messages': self._messages.qsize(),
         }
 
@@ -94,6 +109,16 @@ def start_web_control(cfg, state: RemoteControlState):
         state.set_mode(mode)
         return jsonify({'ok': True, 'mode': state.get_mode()})
 
+    @app.post('/api/hashtag')
+    def api_hashtag():
+        payload = request.get_json(silent=True) or request.form
+        hashtag = str(payload.get('hashtag', ''))
+        try:
+            state.set_hashtag(hashtag)
+        except ValueError as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+        return jsonify({'ok': True, 'hashtag': state.get_hashtag()})
+
     @app.post('/api/message')
     def api_message():
         payload = request.get_json(silent=True) or request.form
@@ -122,7 +147,7 @@ def start_web_control(cfg, state: RemoteControlState):
 </head>
 <body>
   <h1>RSR26 LED Controller</h1>
-  <div>Mode: <b>{{ mode }}</b> / Pending: {{ pending }}</div>
+  <div>Mode: <b>{{ mode }}</b> / Hashtag: <b>{{ hashtag }}</b> / Pending: {{ pending }}</div>
 
   <div class=\"card\">
     <form method=\"post\" action=\"/api/mode\">
@@ -135,6 +160,15 @@ def start_web_control(cfg, state: RemoteControlState):
         <option value=\"pause\">pause</option>
       </select>
       <button type=\"submit\">Set mode</button>
+    </form>
+  </div>
+
+  <div class=\"card\">
+    <form method=\"post\" action=\"/api/hashtag\">
+      <input type=\"hidden\" name=\"token\" value=\"{{ token }}\" />
+      <label>Hashtag</label>
+      <input name=\"hashtag\" value=\"{{ hashtag }}\" placeholder=\"#RSR26\" />
+      <button type=\"submit\">Set hashtag</button>
     </form>
   </div>
 
@@ -154,6 +188,7 @@ def start_web_control(cfg, state: RemoteControlState):
         return render_template_string(
             html,
             mode=snap['mode'],
+            hashtag=snap['hashtag'],
             pending=snap['pending_manual_messages'],
             token=token,
         )

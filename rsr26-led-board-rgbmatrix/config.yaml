@@ -4,11 +4,12 @@ app:
 collector:
   type: "twscrape"          # "mock" or "twscrape"
   poll_interval_seconds: 30
-  max_buffer: 15
-  max_results: 15
+  max_buffer: 20
+  max_results: 20
   exclude_retweets: true
   db_path: "accounts.db"  # twscrape accounts DB, see README for setup
-  state_path: "twscrape_state.json"  # 新規追加
+  state_path: "twscrape_state.json"  # 再起動しても続きから取得するための状態ファイル
+
 matrix:
   width: 128
   height: 64
@@ -30,7 +31,7 @@ rgb_matrix:
   disable_hardware_pulsing: true
   multiplexing: 0
   pwm_bits: 8
-  led_rgb_sequence: "RGB"
+  led_rgb_sequence: "BRG"
   show_refresh_rate: false
   font_candidates:
     - "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc"
@@ -45,10 +46,10 @@ console:
 
 layout:
   title_font_size: 12
-  body_font_size: 17
+  body_font_size: 16
   title_y: 2
   separator_y: 20
-  body_y: 24
+  body_y: 26
   bold_px: 1
 
 scroll:
@@ -57,10 +58,11 @@ scroll:
   short_message_frames: 60
 
 message_builder:
-  filters:
-    remove_urls: true
   title_text: "#RSR26 LIVE"
   latest_post_prefix: ">"
+
+filters:
+  remove_urls: true
 
 scheduler:
   timetable_path: "timetable.yaml"

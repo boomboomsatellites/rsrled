@@ -120,13 +120,19 @@ class IdleMediaPlayer:
             bbox = probe_draw.textbbox((0, 0), text, font=self._clock_font)
             text_w = max(0, bbox[2] - bbox[0])
             text_h = max(0, bbox[3] - bbox[1])
+            # bbox の原点は (0,0) 基準の測定なので、文字によっては
+            # 描画開始位置が負・正どちらにもずれる。実際に描く際は
+            # このずれを打ち消すオフセットを加えないと、キャンバスの
+            # 高さが足りず下側（または上側）が欠けてしまう。
+            offset_x = -bbox[0]
+            offset_y = -bbox[1]
             stamp_w = text_w + (1 if self.clock_shadow else 0)
             stamp_h = text_h + (1 if self.clock_shadow else 0)
             stamp = Image.new('RGBA', (max(1, stamp_w), max(1, stamp_h)), (0, 0, 0, 0))
             stamp_draw = ImageDraw.Draw(stamp)
             if self.clock_shadow:
-                stamp_draw.text((1, 1), text, fill=(0, 0, 0, 255), font=self._clock_font)
-            stamp_draw.text((0, 0), text, fill=(*self.clock_color, 255), font=self._clock_font)
+                stamp_draw.text((offset_x + 1, offset_y + 1), text, fill=(0, 0, 0, 255), font=self._clock_font)
+            stamp_draw.text((offset_x, offset_y), text, fill=(*self.clock_color, 255), font=self._clock_font)
 
             self._clock_stamp = stamp
             self._clock_stamp_pos = self._clock_xy(stamp.width, stamp.height)

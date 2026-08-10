@@ -36,7 +36,7 @@ def main():
     out = make_output(output_name, cfg)
     idle_media = IdleMediaPlayer(cfg)
 
-    control_state = RemoteControlState()
+    control_state = RemoteControlState(default_hashtag=cfg.get('app', {}).get('hashtag', '#RSR26'))
     web_thread = start_web_control(cfg, control_state)
     if web_thread:
         rcfg = cfg.get('remote_control', {})
@@ -77,6 +77,8 @@ def main():
             if now - last_fetch >= poll_interval:
                 last_fetch = now
                 try:
+                    if hasattr(collector, 'set_hashtag'):
+                        collector.set_hashtag(control_state.get_hashtag())
                     new_posts = collector.fetch()
                     fetch_queue.put(new_posts)
                 except Exception as e:

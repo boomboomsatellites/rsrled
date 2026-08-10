@@ -60,6 +60,19 @@ class TwscrapeCollector:
         except Exception:
             logger.exception('twscrape: failed to persist state')
 
+    def set_hashtag(self, hashtag: str):
+        """UI等からハッシュタグを切り替える。切り替え時は since_id をリセットし、
+        新しいハッシュタグで最初から(max_results件まで)取得し直す。"""
+        hashtag = (hashtag or '').strip()
+        if not hashtag:
+            return
+        if hashtag == self.hashtag:
+            return
+        logger.info(f'twscrape: hashtag changed {self.hashtag} -> {hashtag}')
+        self.hashtag = hashtag
+        self.since_id = None
+        self._save_since_id()
+
     def _get_api(self):
         if self._api is None:
             from twscrape import API
